@@ -3,6 +3,7 @@ package deimos.codegen
 import java.nio.file.{Files, Path, Paths}
 import java.nio.charset.StandardCharsets.UTF_8
 
+import scala.jdk.CollectionConverters._
 import deimos.structure._
 import treehugger.forest._
 import treehuggerDSL._
@@ -16,12 +17,17 @@ object Codegen {
     */
   val empty = ValDef(Modifiers(Flags.PARAM), EmptyTree, EmptyTree)
 
-  def pathToPackage(path: Path): String =
-    path.toString.split("\\.").head.split("/").map(pack => if (pack.head.isDigit) s"N$pack" else pack).mkString(".")
+  def escapePathSegment(segment: String): String =
+    if (segment.headOption.exists(_.isDigit)) s"N$segment" else segment
 
-  def splitPath(path: Path): (String, String) = {
-    (pathToPackage(path.getParent), pathToPackage(path.getFileName))
+  def pathToPackage(path: Path): String = {
+    val segments =
+      path.iterator().asScala.map(_.toString).filterNot(_.isEmpty).map(escapePathSegment).toVector
+    (segments.init :+ segments.last.takeWhile(_ != '.')).mkString(".")
   }
+
+  def splitPath(path: Path): (String, String) =
+    (pathToPackage(path.getParent), pathToPackage(path.getFileName))
 
   def addPackage(typ: String, pkg: Option[String]): Type =
     pkg match {
