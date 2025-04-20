@@ -10,19 +10,23 @@ object Structure {
   def process(schemas: Map[Path, WithNamespaces[Schema]]): GeneratedPackageWrapper = {
     // URI -> Prefix
     val namespacesPrefixes: Map[String, String] =
-      schemas.values.flatMap { schema => schema.namespaces.map {
-          case (prefix, uri) if prefix.isEmpty => ("ans", uri)
-          case ns                              => ns
+      schemas.values
+        .flatMap(schema => schema.namespaces.toList)
+        .map { case (prefix, uri) => (uri, prefix) }
+        .groupBy(_._1)
+        .foldLeft((Map.empty[String, String], Set.empty[String], 0)) {
+          case ((res, used, count), (uri, prefixes)) =>
+            val possiblePrefixes =
+              prefixes.collect { case (_, prefix) if prefix.nonEmpty => prefix }.toList.distinct
+                .filterNot(used.contains)
+            possiblePrefixes match {
+              case p :: _ => (res.updated(uri, p), used + p, count)
+              case Nil =>
+                val p = s"ans$count"
+                (res.updated(uri, p), used + p, count + 1)
+            }
         }
-      }.groupBy(_._1)
-        .values
-        .flatMap {
-          case List((prefix, uri)) =>
-            List(uri -> prefix)
-          case namespaces =>
-            namespaces.zipWithIndex.map { case ((prefix, uri), index) => uri -> s"$prefix$index" }
-        }
-        .toMap
+        ._1
 
     val availableFiles = schemas.map {
       case (path, WithNamespaces(schema, _)) =>
