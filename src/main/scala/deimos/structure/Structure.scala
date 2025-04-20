@@ -2,15 +2,15 @@ package deimos.structure
 
 import java.nio.file.{Path, Paths}
 
-import deimos.schema.FileInfo
+import deimos.schema.WithNamespaces
 import deimos.schema.classes._
 import deimos.structure.operations.{Indices, ProcessGlobalElement, XsdContext, XsdMonad, XsdStack}
 
 object Structure {
-  def process(schemas: Map[Path, FileInfo]): GeneratedPackageWrapper = {
+  def process(schemas: Map[Path, WithNamespaces[Schema]]): GeneratedPackageWrapper = {
+    // URI -> Prefix
     val namespacesPrefixes: Map[String, String] =
-      schemas.values.flatMap { fileInfo =>
-        fileInfo.namespaces.map {
+      schemas.values.flatMap { schema => schema.namespaces.map {
           case (prefix, uri) if prefix.isEmpty => ("ans", uri)
           case ns                              => ns
         }
@@ -25,7 +25,7 @@ object Structure {
         .toMap
 
     val availableFiles = schemas.map {
-      case (path, FileInfo(schema, _)) =>
+      case (path, WithNamespaces(schema, _)) =>
         val importedFiles = // TODO: Namespace in `import`
           (schema.include.map(_.schemaLocation) ++ schema.`import`.map(_.schemaLocation)).map { schemaLocation =>
             val includedPath = Paths.get(schemaLocation)
@@ -34,12 +34,12 @@ object Structure {
         path -> (path :: importedFiles)
     }
 
-    val schemasIndex = schemas.map { case (path, fileInfo) => path -> fileInfo.schema }
+    val schemasIndex = schemas.map { case (path, fileInfo) => path -> fileInfo.value }
 
     val indices = Indices(schemasIndex, availableFiles, namespacesPrefixes)
 
     schemas.foreach {
-      case (path, FileInfo(schema, namespaces)) =>
+      case (path, WithNamespaces(schema, namespaces)) =>
         val targetNamespace = schema.targetNamespace.getOrElse("")
 
         def addToIndex[V <: Global](index: ImportsIndex[Path, GlobalName, V], typ: String)(v: V): Unit = {
@@ -58,12 +58,18 @@ object Structure {
     }
 
     val ctx = new XsdContext(indices, schemas.keys.head, XsdStack.empty)
-    val generatedPackage = XsdMonad.traverse(schemas.toList){
-      case (path, FileInfo(schema, _)) =>
-        XsdMonad.traverse(schema.element) { element =>
-          ProcessGlobalElement(element)
-        }.local(_.copy(currentPath = path))
-    }.run(ctx, GeneratedPackage.empty).value.fold(err => throw err, result => result._2)
+    val generatedPackage = XsdMonad
+      .traverse(schemas.toList) {
+        case (path, WithNamespaces(schema, _)) =>
+          XsdMonad
+            .traverse(schema.element) { element =>
+              ProcessGlobalElement(element)
+            }
+            .local(_.copy(currentPath = path))
+      }
+      .run(ctx, GeneratedPackage.empty)
+      .value
+      .fold(err => throw err, result => result._2)
 
     val imports =
       availableFiles.transform(

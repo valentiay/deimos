@@ -8,4 +8,10 @@ object namespaces {
   case object xsd
   implicit val xsdNamespace: Namespace[xsd.type] =
     Namespace.mkInstance(xsdUri)
+
+  val wsdlUri = "http://schemas.xmlsoap.org/wsdl/"
+  case object wsdl
+  implicit val wsdlNamespace: Namespace[wsdl.type] =
+    Namespace.mkInstance(wsdlUri)
+
 }

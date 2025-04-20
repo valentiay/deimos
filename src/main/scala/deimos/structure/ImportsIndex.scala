@@ -31,7 +31,7 @@ final class ImportsIndex[File, K, V] {
     files.collectFirstSome(file => get(file, key).map(value => (file, value)))
   }
 
-  def items: List[(File, List[V])] = index.toList.map { case (k, v) => k -> v.values.toList }
+  def items: List[(File, K, V)] = index.toList.flatMap { case (f, kvs) => kvs.map{case (k, v) => (f, k, v)} }
 
   def map[W](f: V => W): ImportsIndex[File, K, W] = {
     val newIndex = new ImportsIndex[File, K, W]
