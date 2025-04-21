@@ -11,6 +11,7 @@ object WithNamespaces {
       override def decodeAsElement(c: Cursor,
                                    localName: String,
                                    namespaceUri: Option[String]): ElementDecoder[WithNamespaces[T]] = {
+        println(s"Current state: ${c.getEventType}")
         val namespaces =
           (for (i <- 0 until c.getNamespaceCount) yield c.getNamespacePrefix(i) -> c.getNamespaceURI(i)).toMap
 
