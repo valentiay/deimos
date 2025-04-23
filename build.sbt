@@ -6,7 +6,7 @@ scalaVersion := "2.13.16"
 libraryDependencies ++= Seq(
   "com.eed3si9n"  %% "treehugger"  % "0.4.4",
   "org.typelevel" %% "cats-core"   % "2.13.0",
-  "dev.valentiay" %% "phobos-core" % "0.24.0",
+  "dev.valentiay" %% "phobos-core" % "0.26.0",
 )
 
 ThisBuild / updateOptions := updateOptions.value.withGigahorse(false)
