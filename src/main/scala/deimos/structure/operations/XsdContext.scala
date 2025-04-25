@@ -17,15 +17,15 @@ final class XsdContext(
 
   lazy val availableFiles: List[Path] = indices.availableFiles(currentPath)
 
-  def deduplicateParams[T <: Param](params: List[T]): List[T] =
-    params.groupBy(_.name).values.toList.map { ambiguousParams =>
-// TODO: Check it
-//      if (ambiguousParams.forall(_ == ambiguousParams.head)) {
-      ambiguousParams.head
-//      } else {
-//        throw InvalidSchema(s"Ambiguous params: $ambiguousParams", this.currentPath)
-//      }
+  def deduplicateParams[T <: Param](params: List[T]): List[T] = {
+    val duplicatedParams = params.groupBy(_.name).values.filter(_.size > 1)
+    if (duplicatedParams.isEmpty) params
+    else if (duplicatedParams.forall(_.distinct.size == 1)) params.distinct
+    else {
+      val ambiguousParams = duplicatedParams.filter(_.distinct.size > 1)
+      throw InvalidSchema(s"Ambiguous params: $ambiguousParams", this.currentPath)
     }
+  }
 
   def toGlobalName(prefixedName: String): GlobalName =
     prefixedName.split(":") match {

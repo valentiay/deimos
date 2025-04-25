@@ -119,11 +119,11 @@ object XsdMonad {
       }
     } yield clazz
 
-  def traverse[A, B](as: List[A])(f: A => XsdMonad[B]): XsdMonad[List[B]] =
+  def traverse[A, B](as: List[A])(f: A => XsdMonad[B]): XsdMonad[List[B]] = {
     new XsdMonad[List[B]] {
       def run(ctx: XsdContext, state: GeneratedPackage): Eval[Either[InvalidSchema, (List[B], GeneratedPackage)]] =
-        as.foldLeft[Eval[Either[InvalidSchema, (List[B], GeneratedPackage)]]](Eval.now(Right((Nil, state)))) {
-          (res, a) =>
+        as.foldRight[Eval[Either[InvalidSchema, (List[B], GeneratedPackage)]]](Eval.now(Right((Nil, state)))) {
+          (a, res) =>
             res.flatMap {
               case Right((bs, oldPackage)) =>
                 f(a).run(ctx, oldPackage).map {
@@ -134,6 +134,7 @@ object XsdMonad {
             }
         }
     }
+  }
 
   implicit val xsdMonadError: MonadError[XsdMonad, InvalidSchema] =
     new MonadError[XsdMonad, InvalidSchema] {
