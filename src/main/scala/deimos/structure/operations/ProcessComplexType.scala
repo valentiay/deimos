@@ -69,7 +69,7 @@ object ProcessComplexType {
           baseClass          <- XsdMonad.getOrProcessClass(globalBaseTypeName) // TODO: Review not repeated
           selfParams         <- ProcessElements(extension)
           attributes         <- ProcessAttributes(extension)
-          params             = attributes ++ selfParams ++ baseClass.params.filter(notRepeated(attributes ++ selfParams))
+          params             = baseClass.params ++ (attributes ++ selfParams).filter(notRepeated(baseClass.params))
           clazz              = GeneratedClass(name = realTypeName, params = params)
           _                  <- addToPackageIfGlobal(clazz)
         } yield clazz
